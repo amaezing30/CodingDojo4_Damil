@@ -1,34 +1,66 @@
 using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.CommandWpf;
+using System;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
 
 namespace CodingDojo4_Damil.ViewModel
 {
-    /// <summary>
-    /// This class contains properties that the main View can data bind to.
-    /// <para>
-    /// Use the <strong>mvvminpc</strong> snippet to add bindable properties to this ViewModel.
-    /// </para>
-    /// <para>
-    /// You can also use Blend to data bind with the tool's support.
-    /// </para>
-    /// <para>
-    /// See http://www.galasoft.ch/mvvm
-    /// </para>
-    /// </summary>
+    
     public class MainViewModel : ViewModelBase
     {
-        /// <summary>
-        /// Initializes a new instance of the MainViewModel class.
-        /// </summary>
+        public Client client;
+        public bool isConnected = false;
+
+        
+        public string Chatname { get; set; }
+        public RelayCommand ConnectBtnClick { get; set; }
+        public ObservableCollection<string> ReceivedMsgs { get; set; }        
+        public string Msg { get; set; }
+        public RelayCommand SendBtnClick { get; set; }
+
+
+
+
         public MainViewModel()
         {
-            ////if (IsInDesignMode)
-            ////{
-            ////    // Code runs in Blend --> create design time data.
-            ////}
-            ////else
-            ////{
-            ////    // Code runs "for real"
-            ////}
+            ConnectBtnClick = new RelayCommand(
+                () => 
+                    {
+                        isConnected = true;
+                        client = new Client("127.0.0.1", 10100, new Action<string>(NewMsgReceived), ClientDisconnected);
+                    }, 
+                () => 
+                    { return (isConnected = false); ; }
+            );
+
+            ReceivedMsgs = new ObservableCollection<string>();
+            Msg = "";
+
+            SendBtnClick = new RelayCommand(
+                () => 
+                    {
+                        client.Send(Chatname + ": " + Msg);
+                        ReceivedMsgs.Add("YOU: " + Msg);
+                    }, 
+                () => 
+                    { return (isConnected && Msg.Length >= 1); }
+            );
+
         }
+
+        private void NewMsgReceived(string msg)
+        {
+            App.Current.Dispatcher.Invoke(() => { ReceivedMsgs.Add(msg); });
+        }
+        private void ClientDisconnected()
+        {           
+            isConnected = false;
+            //to force the update of the button visibility!!!!
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+
+
     }
 }
